@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VIDE0 — AI Film Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&family=Noto+Sans+JP:wght@300;400&family=Noto+Sans+SC:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#080808;--surface:#0f0f0f;--surface2:#161616;--border:#222;
+    --accent:#e8ff47;--accent2:#ff4d4d;--text:#f0f0f0;--muted:#666;--muted2:#444;--film:#1a1a1a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans','Noto Sans SC','Noto Sans JP',sans-serif;font-weight:300;overflow-x:hidden;cursor:none;}
+  .cursor{width:10px;height:10px;background:var(--accent);border-radius:50%;position:fixed;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);mix-blend-mode:difference;}
+  .cursor-ring{width:36px;height:36px;border:1px solid rgba(232,255,71,0.4);border-radius:50%;position:fixed;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:left .15s ease,top .15s ease;}
+  body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");background-size:200px 200px;pointer-events:none;z-index:100;opacity:.4;}
+  body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);pointer-events:none;z-index:99;}
+
+  /* NAV */
+  nav{position:fixed;top:0;left:0;right:0;z-index:500;display:flex;align-items:center;justify-content:space-between;padding:20px 48px;border-bottom:1px solid transparent;transition:border-color .3s,background .3s;}
+  nav.scrolled{border-color:var(--border);background:rgba(8,8,8,.95);backdrop-filter:blur(20px);}
+  .nav-logo{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:4px;color:var(--accent);text-decoration:none;}
+  .nav-logo span{color:var(--accent2);}
+  .nav-links{display:flex;gap:32px;list-style:none;}
+  .nav-links a{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color .2s;}
+  .nav-links a:hover{color:var(--text);}
+  .nav-right{display:flex;align-items:center;gap:16px;}
+  .lang-switcher{display:flex;gap:2px;background:var(--surface);border:1px solid var(--border);padding:3px;}
+  .lang-btn{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--muted);background:transparent;border:none;padding:5px 10px;cursor:none;transition:all .2s;}
+  .lang-btn.active{background:var(--accent);color:var(--bg);}
+  .lang-btn:hover:not(.active){color:var(--text);}
+  .nav-cta{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--bg);background:var(--accent);border:none;padding:10px 24px;cursor:none;transition:background .2s,transform .2s;white-space:nowrap;}
+  .nav-cta:hover{background:#fff;transform:translateY(-1px);}
+
+  /* HERO */
+  .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;padding:120px 48px 80px;overflow:hidden;}
+  .hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 40%,rgba(232,255,71,.04) 0%,transparent 70%),radial-gradient(ellipse 40% 40% at 80% 60%,rgba(255,77,77,.03) 0%,transparent 60%);}
+  .filmstrip{position:absolute;left:0;top:0;bottom:0;width:40px;display:flex;flex-direction:column;overflow:hidden;opacity:.15;}
+  .filmstrip-right{right:0;left:auto;}
+  .film-hole{width:40px;height:28px;background:var(--bg);border:2px solid var(--muted2);flex-shrink:0;margin:4px 0;}
+  .hero-eyebrow{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--accent);margin-bottom:32px;opacity:0;animation:fadeUp .8s .2s forwards;}
+  .hero-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(70px,12vw,180px);line-height:.9;text-align:center;letter-spacing:-2px;opacity:0;animation:fadeUp .8s .4s forwards;}
+  .hero-title .line1{display:block;color:var(--text);}
+  .hero-title .line2{display:block;color:transparent;-webkit-text-stroke:1px var(--accent);}
+  .hero-title .accent{color:var(--accent);}
+  .hero-sub{margin-top:40px;font-size:16px;color:var(--muted);text-align:center;max-width:520px;line-height:1.8;opacity:0;animation:fadeUp .8s .6s forwards;}
+  .hero-actions{margin-top:52px;display:flex;gap:16px;align-items:center;opacity:0;animation:fadeUp .8s .8s forwards;}
+  .btn-primary{background:var(--accent);color:var(--bg);border:none;padding:16px 40px;font-family:'DM Mono',monospace;font-size:12px;letter-spacing:2px;text-transform:uppercase;cursor:none;transition:all .2s;position:relative;overflow:hidden;white-space:nowrap;}
+  .btn-primary::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,.2);transform:translateX(-100%);transition:transform .3s;}
+  .btn-primary:hover::after{transform:translateX(0);}
+  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);padding:16px 40px;font-family:'DM Mono',monospace;font-size:12px;letter-spacing:2px;text-transform:uppercase;cursor:none;transition:all .2s;text-decoration:none;display:inline-block;white-space:nowrap;}
+  .btn-ghost:hover{color:var(--text);border-color:var(--muted2);}
+  .hero-stats{margin-top:80px;display:flex;gap:64px;opacity:0;animation:fadeUp .8s 1s forwards;}
+  .stat{text-align:center;}
+  .stat-num{font-family:'Bebas Neue',sans-serif;font-size:42px;color:var(--accent);line-height:1;}
+  .stat-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);margin-top:6px;text-transform:uppercase;}
+
+  /* MARQUEE */
+  .marquee-section{border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:16px 0;overflow:hidden;}
+  .marquee-track{display:flex;white-space:nowrap;animation:marquee 30s linear infinite;}
+  .marquee-item{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:4px;color:var(--muted2);padding:0 32px;border-right:1px solid var(--border);}
+  .marquee-item.acc{color:var(--accent);}
+  @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+  /* GENERATE */
+  .generate-section{padding:120px 48px;max-width:1200px;margin:0 auto;}
+  .section-tag{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--accent);margin-bottom:24px;display:flex;align-items:center;gap:12px;}
+  .section-tag::before{content:'';display:block;width:24px;height:1px;background:var(--accent);}
+  .section-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(48px,6vw,80px);line-height:.95;margin-bottom:60px;}
+  .prompt-container{background:var(--surface);border:1px solid var(--border);position:relative;overflow:hidden;}
+  .prompt-container::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent);}
+  .prompt-header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--border);}
+  .prompt-dots{display:flex;gap:6px;}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--muted2);}
+  .dot.red{background:var(--accent2);}
+  .dot.yellow{background:var(--accent);}
+  .prompt-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+  .prompt-body{padding:32px 24px;}
+  .prompt-input{width:100%;background:transparent;border:none;outline:none;color:var(--text);font-family:'DM Mono',monospace;font-size:14px;line-height:1.8;resize:none;min-height:120px;caret-color:var(--accent);}
+  .prompt-input::placeholder{color:var(--muted2);}
+  .prompt-options{padding:0 24px 24px;display:flex;flex-wrap:wrap;gap:8px;}
+  .option-chip{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);border:1px solid var(--border);padding:6px 14px;background:transparent;cursor:none;transition:all .2s;}
+  .option-chip:hover,.option-chip.active{color:var(--accent);border-color:var(--accent);}
+  .prompt-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;}
+  .prompt-settings{display:flex;gap:24px;flex-wrap:wrap;}
+  .setting-item{display:flex;flex-direction:column;gap:4px;}
+  .setting-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+  .setting-select{background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:4px 0;cursor:none;outline:none;min-width:110px;}
+  .setting-select option{background:var(--surface2);}
+  .generate-btn{background:var(--accent);color:var(--bg);border:none;padding:14px 32px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px;cursor:none;transition:all .2s;display:flex;align-items:center;gap:8px;white-space:nowrap;}
+  .generate-btn:hover{background:#fff;transform:translateY(-1px);}
+  .loading-bar{height:2px;background:var(--border);position:relative;overflow:hidden;display:none;}
+  .loading-bar.active{display:block;}
+  .loading-progress{position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:loadBar 1.5s ease-in-out infinite;}
+  @keyframes loadBar{from{left:-100%}to{left:100%}}
+
+  /* TABS */
+  .tab-nav{display:flex;border-bottom:1px solid var(--border);margin-bottom:48px;overflow-x:auto;}
+  .tab-btn{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);background:transparent;border:none;border-bottom:2px solid transparent;padding:16px 28px;cursor:none;transition:all .2s;margin-bottom:-1px;white-space:nowrap;}
+  .tab-btn:hover{color:var(--text);}
+  .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  /* Upload zone */
+  .upload-zone{border:1px dashed var(--border);padding:60px;text-align:center;cursor:none;transition:border-color .2s;}
+  .upload-zone:hover{border-color:var(--muted2);}
+  .upload-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:3px;color:var(--muted2);margin-bottom:8px;}
+  .upload-sub{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted2);}
+
+  input[type=range]{-webkit-appearance:none;background:var(--border);height:2px;outline:none;cursor:none;width:120px;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;background:var(--accent);border-radius:50%;}
+
+  /* GALLERY */
+  .preview-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-top:48px;}
+  .preview-card{aspect-ratio:16/9;background:var(--surface);border:1px solid var(--border);position:relative;overflow:hidden;cursor:none;transition:border-color .3s;}
+  .preview-card:hover{border-color:var(--accent);}
+  .preview-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.8) 0%,transparent 50%);}
+  .preview-info{position:absolute;bottom:0;left:0;right:0;padding:16px;}
+  .preview-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--text);text-transform:uppercase;margin-bottom:4px;}
+  .preview-meta{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;}
+  .preview-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:40px;height:40px;border:1px solid rgba(255,255,255,.3);border-radius:50%;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .3s;background:rgba(0,0,0,.5);}
+  .preview-card:hover .preview-play{opacity:1;}
+  .thumb-1{background:linear-gradient(135deg,#1a0a2e 0%,#16213e 50%,#0f3460 100%);}
+  .thumb-2{background:linear-gradient(135deg,#0d0d0d 0%,#1a1a2e 50%,#16213e 100%);}
+  .thumb-3{background:linear-gradient(135deg,#2d1515 0%,#1a0505 50%,#0d0d0d 100%);}
+  .thumb-4{background:linear-gradient(135deg,#0a1628 0%,#152744 50%,#1e3a5f 100%);}
+  .thumb-5{background:linear-gradient(135deg,#1a1a0a 0%,#2a2a10 50%,#1a150a 100%);}
+  .thumb-6{background:linear-gradient(135deg,#0d1a0d 0%,#152a15 50%,#0a1a0a 100%);}
+  .scene-shape{position:absolute;border-radius:50%;filter:blur(40px);}
+
+  /* FEATURES */
+  .features-section{padding:120px 48px;background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+  .features-inner{max-width:1200px;margin:0 auto;}
+  .features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);margin-top:60px;}
+  .feature-card{background:var(--surface);padding:48px 40px;position:relative;overflow:hidden;transition:background .3s;}
+  .feature-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .3s;}
+  .feature-card:hover::before{transform:scaleX(1);}
+  .feature-card:hover{background:var(--surface2);}
+  .feature-num{font-family:'Bebas Neue',sans-serif;font-size:56px;color:var(--border);line-height:1;margin-bottom:24px;transition:color .3s;}
+  .feature-card:hover .feature-num{color:var(--accent);opacity:.3;}
+  .feature-title{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px;margin-bottom:16px;}
+  .feature-desc{font-size:13px;color:var(--muted);line-height:1.8;}
+
+  /* MODELS */
+  .models-section{padding:120px 48px;max-width:1200px;margin:0 auto;}
+  .models-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:60px;}
+  .model-card{background:var(--surface);border:1px solid var(--border);padding:40px;position:relative;cursor:none;transition:border-color .3s;overflow:hidden;}
+  .model-card:hover{border-color:var(--accent);}
+  .model-card.featured{border-color:var(--accent);grid-column:span 2;display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center;}
+  .model-badge{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--bg);background:var(--accent);padding:4px 10px;display:inline-block;margin-bottom:20px;}
+  .model-name{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:3px;margin-bottom:12px;}
+  .model-desc{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:24px;}
+  .model-specs{display:flex;flex-direction:column;gap:8px;}
+  .model-spec{display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:11px;padding:8px 0;border-bottom:1px solid var(--border);}
+  .spec-key{color:var(--muted);}
+  .spec-val{color:var(--accent);}
+  .model-preview{aspect-ratio:16/9;background:var(--film);border:1px solid var(--border);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+  .model-preview-bg{position:absolute;inset:0;background:linear-gradient(135deg,#0a0a1a 0%,#1a1a2e 100%);}
+  .model-preview-glow{position:absolute;width:80%;height:80%;border-radius:50%;background:radial-gradient(circle,rgba(232,255,71,.08) 0%,transparent 70%);}
+  .model-preview-text{font-family:'Bebas Neue',sans-serif;font-size:60px;letter-spacing:8px;color:rgba(232,255,71,.15);position:relative;z-index:2;}
+
+  /* PRICING */
+  .pricing-section{padding:120px 48px;background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+  .pricing-inner{max-width:1200px;margin:0 auto;}
+  .pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);margin-top:60px;}
+  .pricing-card{background:var(--surface);padding:48px 40px;position:relative;}
+  .pricing-card.pro{background:var(--bg);}
+  .pricing-tag{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:32px;display:block;}
+  .pricing-tag.highlight{color:var(--accent);}
+  .pricing-price{font-family:'Bebas Neue',sans-serif;font-size:72px;line-height:1;margin-bottom:8px;}
+  .pricing-period{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:40px;display:block;}
+  .pricing-features{list-style:none;display:flex;flex-direction:column;gap:16px;margin-bottom:40px;}
+  .pricing-features li{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:12px;}
+  .pricing-features li::before{content:'→';color:var(--accent);font-family:'DM Mono',monospace;font-size:12px;}
+  .pricing-features li.inactive{opacity:.3;}
+  .pricing-features li.inactive::before{color:var(--muted2);content:'—';}
+  .pricing-btn{width:100%;padding:14px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px;cursor:none;transition:all .2s;border:1px solid var(--border);background:transparent;color:var(--muted);}
+  .pricing-btn:hover{border-color:var(--text);color:var(--text);}
+  .pricing-btn.cta{background:var(--accent);border-color:var(--accent);color:var(--bg);}
+  .pricing-btn.cta:hover{background:#fff;border-color:#fff;}
+
+  /* FOOTER */
+  footer{padding:80px 48px 40px;border-top:1px solid var(--border);}
+  .footer-inner{max-width:1200px;margin:0 auto;}
+  .footer-top{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:80px;margin-bottom:80px;}
+  .footer-brand{font-family:'Bebas Neue',sans-serif;font-size:40px;letter-spacing:6px;color:var(--accent);margin-bottom:20px;}
+  .footer-brand span{color:var(--accent2);}
+  .footer-tagline{font-size:13px;color:var(--muted);line-height:1.7;max-width:260px;}
+  .footer-col h4{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:24px;}
+  .footer-links{list-style:none;display:flex;flex-direction:column;gap:12px;}
+  .footer-links a{font-size:14px;color:var(--muted);text-decoration:none;transition:color .2s;cursor:none;}
+  .footer-links a:hover{color:var(--text);}
+  .footer-bottom{display:flex;justify-content:space-between;align-items:center;padding-top:40px;border-top:1px solid var(--border);}
+  .footer-copy{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted2);text-transform:uppercase;}
+  .footer-social{display:flex;gap:24px;}
+  .footer-social a{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted2);text-decoration:none;text-transform:uppercase;transition:color .2s;cursor:none;}
+  .footer-social a:hover{color:var(--accent);}
+
+  /* NOTIF */
+  .notif{position:fixed;bottom:40px;right:48px;background:var(--surface);border:1px solid var(--accent);padding:16px 24px;display:flex;align-items:center;gap:12px;z-index:600;transform:translateX(150%);transition:transform .4s cubic-bezier(.16,1,.3,1);}
+  .notif.show{transform:translateX(0);}
+  .notif-text{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--text);}
+  .notif-dot{width:6px;height:6px;background:var(--accent);border-radius:50%;flex-shrink:0;}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+  ::-webkit-scrollbar{width:4px;}
+  ::-webkit-scrollbar-track{background:var(--bg);}
+  ::-webkit-scrollbar-thumb{background:var(--border);}
+
+  @media(max-width:900px){
+    nav{padding:16px 20px;}
+    .nav-links{display:none;}
+    .hero{padding:100px 24px 60px;}
+    .generate-section,.models-section{padding:80px 24px;}
+    .features-section,.pricing-section{padding:80px 24px;}
+    footer{padding:60px 24px 32px;}
+    .preview-grid{grid-template-columns:1fr 1fr;}
+    .features-grid,.pricing-grid{grid-template-columns:1fr;}
+    .models-grid{grid-template-columns:1fr;}
+    .model-card.featured{grid-column:span 1;grid-template-columns:1fr;}
+    .footer-top{grid-template-columns:1fr 1fr;gap:40px;}
+    .hero-stats{gap:32px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<nav id="navbar">
+  <a href="#" class="nav-logo">VIDE<span>0</span></a>
+  <ul class="nav-links">
+    <li><a href="#generate" data-i18n="nav_generate"></a></li>
+    <li><a href="#models" data-i18n="nav_models"></a></li>
+    <li><a href="#gallery" data-i18n="nav_gallery"></a></li>
+    <li><a href="#pricing" data-i18n="nav_pricing"></a></li>
+    <li><a href="#" onclick="sn('notif_docs')" data-i18n="nav_docs"></a></li>
+  </ul>
+  <div class="nav-right">
+    <div class="lang-switcher">
+      <button class="lang-btn active" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" onclick="setLang('zh')">中文</button>
+      <button class="lang-btn" onclick="setLang('ja')">日本語</button>
+    </div>
+    <button class="nav-cta" onclick="sn('notif_signup')" data-i18n="nav_cta"></button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="filmstrip">
+    <div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div>
+  </div>
+  <div class="filmstrip filmstrip-right">
+    <div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div><div class="film-hole"></div>
+  </div>
+  <div class="hero-eyebrow" data-i18n="hero_eyebrow"></div>
+  <h1 class="hero-title">
+    <span class="line1" data-i18n="hero_line1"></span>
+    <span class="line2" id="heroLine2"></span>
+  </h1>
+  <p class="hero-sub" data-i18n="hero_sub"></p>
+  <div class="hero-actions">
+    <button class="btn-primary" onclick="document.getElementById('generate').scrollIntoView({behavior:'smooth'})" data-i18n="hero_cta1"></button>
+    <a href="#gallery" class="btn-ghost" data-i18n="hero_cta2"></a>
+  </div>
+  <div class="hero-stats">
+    <div class="stat"><div class="stat-num">4K</div><div class="stat-label" data-i18n="stat_res"></div></div>
+    <div class="stat"><div class="stat-num">120s</div><div class="stat-label" data-i18n="stat_dur"></div></div>
+    <div class="stat"><div class="stat-num">48+</div><div class="stat-label" data-i18n="stat_styles"></div></div>
+    <div class="stat"><div class="stat-num">2M+</div><div class="stat-label" data-i18n="stat_films"></div></div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-section">
+  <div class="marquee-track" id="marqueeTrack"></div>
+</div>
+
+<!-- GENERATE -->
+<section class="generate-section" id="generate">
+  <div class="section-tag" data-i18n="sec_generate"></div>
+  <h2 class="section-title" data-i18n="sec_generate_title"></h2>
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab(event,'t2v')" data-i18n="tab_t2v"></button>
+    <button class="tab-btn" onclick="switchTab(event,'i2v')" data-i18n="tab_i2v"></button>
+    <button class="tab-btn" onclick="switchTab(event,'v2v')" data-i18n="tab_v2v"></button>
+    <button class="tab-btn" onclick="switchTab(event,'ext')" data-i18n="tab_ext"></button>
+  </div>
+
+  <div class="tab-panel active" id="t2v">
+    <div class="prompt-container">
+      <div class="prompt-header">
+        <div class="prompt-dots"><div class="dot red"></div><div class="dot yellow"></div><div class="dot"></div></div>
+        <span class="prompt-label" data-i18n="plabel_t2v"></span>
+      </div>
+      <div class="loading-bar" id="loadingBar"><div class="loading-progress"></div></div>
+      <div class="prompt-body">
+        <textarea class="prompt-input" id="promptInput" rows="4" data-i18n-ph="prompt_ph"></textarea>
+      </div>
+      <div class="prompt-options">
+        <button class="option-chip active" onclick="toggleChip(this)" data-i18n="chip_cinematic"></button>
+        <button class="option-chip" onclick="toggleChip(this)" data-i18n="chip_noir"></button>
+        <button class="option-chip" onclick="toggleChip(this)" data-i18n="chip_scifi"></button>
+        <button class="option-chip" onclick="toggleChip(this)" data-i18n="chip_horror"></button>
+        <button class="option-chip" onclick="toggleChip(this)" data-i18n="chip_doc"></button>
+        <button class="option-chip" onclick="toggleChip(this)" data-i18n="chip_anime"></button>
+        <button class="option-chip" onclick="toggleChip(this)" data-i18n="chip_vintage"></button>
+        <button class="option-chip" onclick="toggleChip(this)" data-i18n="chip_slowmo"></button>
+        <button class="option-chip" onclick="toggleChip(this)" data-i18n="chip_drone"></button>
+        <button class="option-chip" onclick="toggleChip(this)" data-i18n="chip_macro"></button>
+      </div>
+      <div class="prompt-footer">
+        <div class="prompt-settings">
+          <div class="setting-item"><span class="setting-label" data-i18n="set_duration"></span>
+            <select class="setting-select">
+              <option data-i18n="opt_5s"></option><option data-i18n="opt_10s"></option>
+              <option selected data-i18n="opt_30s"></option><option data-i18n="opt_60s"></option><option data-i18n="opt_120s"></option>
+            </select>
+          </div>
+          <div class="setting-item"><span class="setting-label" data-i18n="set_res"></span>
+            <select class="setting-select"><option>720p</option><option selected>1080p</option><option>4K</option></select>
+          </div>
+          <div class="setting-item"><span class="setting-label" data-i18n="set_ratio"></span>
+            <select class="setting-select">
+              <option selected data-i18n="opt_wide"></option><option data-i18n="opt_vert"></option>
+              <option data-i18n="opt_sq"></option><option data-i18n="opt_ana"></option>
+            </select>
+          </div>
+          <div class="setting-item"><span class="setting-label" data-i18n="set_model"></span>
+            <select class="setting-select"><option data-i18n="opt_fast"></option><option selected data-i18n="opt_pro"></option><option data-i18n="opt_ultra"></option></select>
+          </div>
+        </div>
+        <button class="generate-btn" onclick="triggerGenerate()">▶ <span data-i18n="btn_generate"></span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="i2v">
+    <div class="prompt-container">
+      <div class="prompt-header">
+        <div class="prompt-dots"><div class="dot red"></div><div class="dot yellow"></div><div class="dot"></div></div>
+        <span class="prompt-label" data-i18n="plabel_i2v"></span>
+      </div>
+      <div class="prompt-body">
+        <div class="upload-zone" onclick="sn('notif_upload')">
+          <div class="upload-title" data-i18n="up_img_title"></div>
+          <div class="upload-sub" data-i18n="up_img_sub"></div>
+        </div>
+        <textarea class="prompt-input" data-i18n-ph="i2v_ph" rows="2" style="margin-top:16px"></textarea>
+      </div>
+      <div class="prompt-footer">
+        <div class="prompt-settings">
+          <div class="setting-item"><span class="setting-label" data-i18n="set_motion"></span><input type="range" min="1" max="10" value="5"></div>
+          <div class="setting-item"><span class="setting-label" data-i18n="set_duration"></span>
+            <select class="setting-select"><option selected data-i18n="opt_5s"></option><option data-i18n="opt_10s"></option></select>
+          </div>
+        </div>
+        <button class="generate-btn" onclick="triggerGenerate()">▶ <span data-i18n="btn_animate"></span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="v2v">
+    <div class="prompt-container">
+      <div class="prompt-header">
+        <div class="prompt-dots"><div class="dot red"></div><div class="dot yellow"></div><div class="dot"></div></div>
+        <span class="prompt-label" data-i18n="plabel_v2v"></span>
+      </div>
+      <div class="prompt-body">
+        <div class="upload-zone" onclick="sn('notif_upload')">
+          <div class="upload-title" data-i18n="up_vid_title"></div>
+          <div class="upload-sub" data-i18n="up_vid_sub"></div>
+        </div>
+        <textarea class="prompt-input" data-i18n-ph="v2v_ph" rows="2" style="margin-top:16px"></textarea>
+      </div>
+      <div class="prompt-footer">
+        <div class="prompt-settings">
+          <div class="setting-item"><span class="setting-label" data-i18n="set_style_str"></span><input type="range" min="1" max="10" value="7"></div>
+          <div class="setting-item"><span class="setting-label" data-i18n="set_preserve"></span><input type="range" min="1" max="10" value="8"></div>
+        </div>
+        <button class="generate-btn" onclick="triggerGenerate()">▶ <span data-i18n="btn_transform"></span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="ext">
+    <div class="prompt-container">
+      <div class="prompt-header">
+        <div class="prompt-dots"><div class="dot red"></div><div class="dot yellow"></div><div class="dot"></div></div>
+        <span class="prompt-label" data-i18n="plabel_ext"></span>
+      </div>
+      <div class="prompt-body">
+        <div class="upload-zone" onclick="sn('notif_upload')">
+          <div class="upload-title" data-i18n="up_ext_title"></div>
+          <div class="upload-sub" data-i18n="up_ext_sub"></div>
+        </div>
+        <textarea class="prompt-input" data-i18n-ph="ext_ph" rows="2" style="margin-top:16px"></textarea>
+      </div>
+      <div class="prompt-footer">
+        <div class="prompt-settings">
+          <div class="setting-item"><span class="setting-label" data-i18n="set_extend_by"></span>
+            <select class="setting-select">
+              <option data-i18n="opt_p5s"></option><option selected data-i18n="opt_p10s"></option>
+              <option data-i18n="opt_p30s"></option><option data-i18n="opt_p60s"></option>
+            </select>
+          </div>
+        </div>
+        <button class="generate-btn" onclick="triggerGenerate()">▶ <span data-i18n="btn_extend"></span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="preview-grid" id="gallery">
+    <div class="preview-card" onclick="sn('notif_viewer')"><div class="thumb thumb-1"><div class="scene-shape" style="width:120px;height:120px;background:rgba(100,80,255,0.2);top:20%;left:10%"></div></div><div class="preview-overlay"></div><div class="preview-info"><div class="preview-title" data-i18n="g1_title"></div><div class="preview-meta">Cinematic · 4K · 30s</div></div><div class="preview-play">▶</div></div>
+    <div class="preview-card" onclick="sn('notif_viewer')"><div class="thumb thumb-2"><div class="scene-shape" style="width:150px;height:80px;background:rgba(50,200,255,0.1);top:30%;left:20%"></div></div><div class="preview-overlay"></div><div class="preview-info"><div class="preview-title" data-i18n="g2_title"></div><div class="preview-meta">Documentary · 1080p · 60s</div></div><div class="preview-play">▶</div></div>
+    <div class="preview-card" onclick="sn('notif_viewer')"><div class="thumb thumb-3"><div class="scene-shape" style="width:100px;height:100px;background:rgba(255,50,50,0.15);top:20%;right:20%"></div></div><div class="preview-overlay"></div><div class="preview-info"><div class="preview-title" data-i18n="g3_title"></div><div class="preview-meta">Noir · 4K · 15s</div></div><div class="preview-play">▶</div></div>
+    <div class="preview-card" onclick="sn('notif_viewer')"><div class="thumb thumb-4"><div class="scene-shape" style="width:200px;height:100px;background:rgba(50,100,255,0.12);bottom:10%;left:0"></div></div><div class="preview-overlay"></div><div class="preview-info"><div class="preview-title" data-i18n="g4_title"></div><div class="preview-meta">Slow-Mo · 4K · 45s</div></div><div class="preview-play">▶</div></div>
+    <div class="preview-card" onclick="sn('notif_viewer')"><div class="thumb thumb-5"><div class="scene-shape" style="width:80px;height:80px;background:rgba(255,220,50,0.12);top:30%;left:30%"></div></div><div class="preview-overlay"></div><div class="preview-info"><div class="preview-title" data-i18n="g5_title"></div><div class="preview-meta">Cinematic · 1080p · 20s</div></div><div class="preview-play">▶</div></div>
+    <div class="preview-card" onclick="sn('notif_viewer')"><div class="thumb thumb-6"><div class="scene-shape" style="width:120px;height:120px;background:rgba(50,255,100,0.08);top:10%;right:10%"></div></div><div class="preview-overlay"></div><div class="preview-info"><div class="preview-title" data-i18n="g6_title"></div><div class="preview-meta">Documentary · 4K · 90s</div></div><div class="preview-play">▶</div></div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-section">
+  <div class="features-inner">
+    <div class="section-tag" data-i18n="sec_features"></div>
+    <h2 class="section-title" data-i18n="sec_features_title"></h2>
+    <div class="features-grid">
+      <div class="feature-card"><div class="feature-num">01</div><div class="feature-title" data-i18n="f1_title"></div><p class="feature-desc" data-i18n="f1_desc"></p></div>
+      <div class="feature-card"><div class="feature-num">02</div><div class="feature-title" data-i18n="f2_title"></div><p class="feature-desc" data-i18n="f2_desc"></p></div>
+      <div class="feature-card"><div class="feature-num">03</div><div class="feature-title" data-i18n="f3_title"></div><p class="feature-desc" data-i18n="f3_desc"></p></div>
+      <div class="feature-card"><div class="feature-num">04</div><div class="feature-title" data-i18n="f4_title"></div><p class="feature-desc" data-i18n="f4_desc"></p></div>
+      <div class="feature-card"><div class="feature-num">05</div><div class="feature-title" data-i18n="f5_title"></div><p class="feature-desc" data-i18n="f5_desc"></p></div>
+      <div class="feature-card"><div class="feature-num">06</div><div class="feature-title" data-i18n="f6_title"></div><p class="feature-desc" data-i18n="f6_desc"></p></div>
+    </div>
+  </div>
+</section>
+
+<!-- MODELS -->
+<section class="models-section" id="models">
+  <div class="section-tag" data-i18n="sec_models"></div>
+  <h2 class="section-title" data-i18n="sec_models_title"></h2>
+  <div class="models-grid">
+    <div class="model-card featured">
+      <div>
+        <div class="model-badge" data-i18n="model_badge"></div>
+        <div class="model-name">VIDE0 ULTRA</div>
+        <p class="model-desc" data-i18n="ultra_desc"></p>
+        <div class="model-specs">
+          <div class="model-spec"><span class="spec-key" data-i18n="spec_maxdur"></span><span class="spec-val">120 seconds</span></div>
+          <div class="model-spec"><span class="spec-key" data-i18n="spec_res"></span><span class="spec-val">Up to 4K HDR</span></div>
+          <div class="model-spec"><span class="spec-key" data-i18n="spec_gentime"></span><span class="spec-val">~4 min / 30s clip</span></div>
+          <div class="model-spec"><span class="spec-key" data-i18n="spec_fps"></span><span class="spec-val">24 / 30 / 60fps</span></div>
+        </div>
+      </div>
+      <div class="model-preview"><div class="model-preview-bg"></div><div class="model-preview-glow"></div><div class="model-preview-text">ULTRA</div></div>
+    </div>
+    <div class="model-card">
+      <div class="model-name">VIDE0 PRO</div>
+      <p class="model-desc" data-i18n="pro_desc"></p>
+      <div class="model-specs">
+        <div class="model-spec"><span class="spec-key" data-i18n="spec_maxdur"></span><span class="spec-val">60 seconds</span></div>
+        <div class="model-spec"><span class="spec-key" data-i18n="spec_res"></span><span class="spec-val">Up to 1080p</span></div>
+        <div class="model-spec"><span class="spec-key" data-i18n="spec_gentime"></span><span class="spec-val">~90s / 30s clip</span></div>
+      </div>
+    </div>
+    <div class="model-card">
+      <div class="model-name">VIDE0 FAST</div>
+      <p class="model-desc" data-i18n="fast_desc"></p>
+      <div class="model-specs">
+        <div class="model-spec"><span class="spec-key" data-i18n="spec_maxdur"></span><span class="spec-val">15 seconds</span></div>
+        <div class="model-spec"><span class="spec-key" data-i18n="spec_res"></span><span class="spec-val">Up to 720p</span></div>
+        <div class="model-spec"><span class="spec-key" data-i18n="spec_gentime"></span><span class="spec-val">~10s / 10s clip</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing-section" id="pricing">
+  <div class="pricing-inner">
+    <div class="section-tag" data-i18n="sec_pricing"></div>
+    <h2 class="section-title" data-i18n="sec_pricing_title"></h2>
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <span class="pricing-tag" data-i18n="plan_starter"></span>
+        <div class="pricing-price">$0</div>
+        <span class="pricing-period" data-i18n="plan_free"></span>
+        <ul class="pricing-features">
+          <li data-i18n="pf1_1"></li><li data-i18n="pf1_2"></li><li data-i18n="pf1_3"></li><li data-i18n="pf1_4"></li>
+          <li class="inactive" data-i18n="pf_4k"></li><li class="inactive" data-i18n="pf_commercial"></li><li class="inactive" data-i18n="pf_api"></li>
+        </ul>
+        <button class="pricing-btn" onclick="sn('notif_signup')" data-i18n="btn_getstarted"></button>
+      </div>
+      <div class="pricing-card pro">
+        <span class="pricing-tag highlight" data-i18n="plan_pro_label"></span>
+        <div class="pricing-price">$48</div>
+        <span class="pricing-period" data-i18n="plan_month"></span>
+        <ul class="pricing-features">
+          <li data-i18n="pf2_1"></li><li data-i18n="pf2_2"></li><li data-i18n="pf2_3"></li><li data-i18n="pf2_4"></li>
+          <li data-i18n="pf_4k"></li><li data-i18n="pf_commercial"></li><li class="inactive" data-i18n="pf_api"></li>
+        </ul>
+        <button class="pricing-btn cta" onclick="sn('notif_trial')" data-i18n="btn_trial"></button>
+      </div>
+      <div class="pricing-card">
+        <span class="pricing-tag" data-i18n="plan_studio"></span>
+        <div class="pricing-price">$199</div>
+        <span class="pricing-period" data-i18n="plan_month"></span>
+        <ul class="pricing-features">
+          <li data-i18n="pf3_1"></li><li data-i18n="pf3_2"></li><li data-i18n="pf3_3"></li><li data-i18n="pf3_4"></li>
+          <li data-i18n="pf3_5"></li><li data-i18n="pf_commercial"></li><li data-i18n="pf3_6"></li>
+        </ul>
+        <button class="pricing-btn" onclick="sn('notif_sales')" data-i18n="btn_sales"></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div>
+        <div class="footer-brand">VIDE<span>0</span></div>
+        <p class="footer-tagline" data-i18n="footer_tagline"></p>
+      </div>
+      <div class="footer-col">
+        <h4 data-i18n="footer_product"></h4>
+        <ul class="footer-links">
+          <li><a href="#generate" data-i18n="nav_generate"></a></li>
+          <li><a href="#models" data-i18n="nav_models"></a></li>
+          <li><a href="#gallery" data-i18n="nav_gallery"></a></li>
+          <li><a href="#pricing" data-i18n="nav_pricing"></a></li>
+          <li><a href="#" onclick="sn('notif_docs')" data-i18n="nav_docs"></a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4 data-i18n="footer_company"></h4>
+        <ul class="footer-links">
+          <li><a href="#" onclick="sn('notif_about')" data-i18n="footer_about"></a></li>
+          <li><a href="#" onclick="sn('notif_blog')" data-i18n="footer_blog"></a></li>
+          <li><a href="#" onclick="sn('notif_careers')" data-i18n="footer_careers"></a></li>
+          <li><a href="#" onclick="sn('notif_press')" data-i18n="footer_press"></a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4 data-i18n="footer_legal"></h4>
+        <ul class="footer-links">
+          <li><a href="#" onclick="sn('notif_legal')" data-i18n="footer_privacy"></a></li>
+          <li><a href="#" onclick="sn('notif_legal')" data-i18n="footer_terms"></a></li>
+          <li><a href="#" onclick="sn('notif_legal')" data-i18n="footer_cookies"></a></li>
+          <li><a href="#" onclick="sn('notif_legal')" data-i18n="footer_licenses"></a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-copy" data-i18n="footer_copy"></div>
+      <div class="footer-social">
+        <a href="#" onclick="showNotif('X / Twitter')">X / Twitter</a>
+        <a href="#" onclick="showNotif('Discord')">Discord</a>
+        <a href="#" onclick="showNotif('YouTube')">YouTube</a>
+        <a href="#" onclick="showNotif('GitHub')">GitHub</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<div class="notif" id="notif">
+  <div class="notif-dot"></div>
+  <span class="notif-text" id="notifText"></span>
+</div>
+
+<script>
+// ── TRANSLATIONS ──────────────────────────────────────────────────────────────
+const i18n = {
+en:{
+  nav_generate:"Generate",nav_models:"Models",nav_gallery:"Gallery",nav_pricing:"Pricing",nav_docs:"API Docs",nav_cta:"Start Free",
+  hero_eyebrow:"— Next Generation AI Film Studio —",
+  hero_line1:"DIRECT YOUR",hero_line2:"VISION.",
+  hero_sub:"Turn any idea into a cinematic film. Describe a scene, choose your style, and let VIDE0 generate stunning video in seconds.",
+  hero_cta1:"Generate a Film",hero_cta2:"View Gallery",
+  stat_res:"Max Resolution",stat_dur:"Max Duration",stat_styles:"Style Presets",stat_films:"Films Created",
+  mq1:"Text to Film",mq2:"Image to Video",mq3:"4K Generation",mq4:"AI Cinematography",mq5:"Voice to Scene",mq6:"Motion Control",mq7:"Style Transfer",
+  sec_generate:"Generate",sec_generate_title:"CRAFT YOUR\nSCENE",
+  tab_t2v:"Text to Video",tab_i2v:"Image to Video",tab_v2v:"Video to Video",tab_ext:"Extend",
+  plabel_t2v:"Prompt Editor v2.4",plabel_i2v:"Image → Video",plabel_v2v:"Video → Video Style Transfer",plabel_ext:"Video Extender",
+  prompt_ph:"Describe your scene... e.g. 'A lone astronaut walks across a desolate red planet at dusk, dust swirling in slow motion — cinematic, 4K'",
+  i2v_ph:"Describe the motion... e.g. 'camera slowly pushes in, light flickering'",
+  v2v_ph:"Describe the target style... e.g. 'Wes Anderson film, pastel colors, symmetrical composition'",
+  ext_ph:"Describe what happens next... e.g. 'the camera pulls back to reveal the entire city'",
+  chip_cinematic:"Cinematic",chip_noir:"Noir",chip_scifi:"Sci-Fi",chip_horror:"Horror",chip_doc:"Documentary",chip_anime:"Anime",chip_vintage:"Vintage",chip_slowmo:"Slow-Mo",chip_drone:"Drone Shot",chip_macro:"Macro",
+  set_duration:"Duration",set_res:"Resolution",set_ratio:"Aspect Ratio",set_model:"Model",set_motion:"Motion Strength",set_style_str:"Style Strength",set_preserve:"Preserve Structure",set_extend_by:"Extend by",
+  opt_5s:"5 seconds",opt_10s:"10 seconds",opt_30s:"30 seconds",opt_60s:"60 seconds",opt_120s:"120 seconds",
+  opt_wide:"16:9 Widescreen",opt_vert:"9:16 Vertical",opt_sq:"1:1 Square",opt_ana:"2.39:1 Anamorphic",
+  opt_fast:"VIDE0 Fast",opt_pro:"VIDE0 Pro",opt_ultra:"VIDE0 Ultra",
+  opt_p5s:"+5 seconds",opt_p10s:"+10 seconds",opt_p30s:"+30 seconds",opt_p60s:"+60 seconds",
+  btn_generate:"Generate",btn_animate:"Animate",btn_transform:"Transform",btn_extend:"Extend",
+  up_img_title:"DROP IMAGE HERE",up_img_sub:"PNG, JPG, WEBP — max 20MB",
+  up_vid_title:"DROP VIDEO HERE",up_vid_sub:"MP4, MOV, WEBM — max 200MB",
+  up_ext_title:"UPLOAD BASE VIDEO",up_ext_sub:"We'll seamlessly continue the scene",
+  g1_title:"Neon Metropolis",g2_title:"Deep Ocean Descent",g3_title:"Desert Inferno",g4_title:"Arctic Solitude",g5_title:"Golden Hour Fields",g6_title:"Ancient Forest",
+  sec_features:"Why VIDE0",sec_features_title:"BUILT FOR\nFILMMAKERS",
+  f1_title:"Cinematic AI",f1_desc:"Our models are trained on thousands of professional films, understanding depth, composition, lighting, and narrative rhythm.",
+  f2_title:"Scene Control",f2_desc:"Precise directorial control over camera movement, subject motion, pacing, and atmosphere — all through natural language.",
+  f3_title:"4K Native",f3_desc:"Generate at native 4K resolution with HDR color grading. Every frame is output-ready for professional distribution.",
+  f4_title:"Style Library",f4_desc:"48 curated cinematic styles — from Kubrickian symmetry to guerrilla handheld — applied consistently across your entire film.",
+  f5_title:"Temporal Coherence",f5_desc:"Characters, environments, and lighting remain consistent across scenes. No flickering, no drift, no breaks in continuity.",
+  f6_title:"API Access",f6_desc:"Integrate VIDE0 into your production pipeline via REST API. Batch generation, webhooks, and custom fine-tuning available.",
+  sec_models:"Models",sec_models_title:"CHOOSE YOUR\nENGINE",
+  model_badge:"New · Latest",
+  ultra_desc:"Our most capable model. Trained on 50M cinematic frames with advanced temporal coherence and photorealistic rendering. For productions that demand perfection.",
+  pro_desc:"The balanced choice for professional work. Fast generation with cinematic output quality. Ideal for iterative production.",
+  fast_desc:"Rapid prototyping and iteration. Generate storyboard-quality video in seconds. Perfect for ideation and previsualization.",
+  spec_maxdur:"Max Duration",spec_res:"Resolution",spec_gentime:"Generation Time",spec_fps:"Frame Rate",
+  sec_pricing:"Pricing",sec_pricing_title:"TRANSPARENT\nPLANS",
+  plan_starter:"Starter",plan_free:"forever free",plan_month:"per month",plan_pro_label:"Pro — Most Popular",plan_studio:"Studio",
+  pf1_1:"50 generation credits/mo",pf1_2:"720p max resolution",pf1_3:"VIDE0 Fast model only",pf1_4:"10s max duration",
+  pf_4k:"4K export",pf_commercial:"Commercial license",pf_api:"API access",
+  pf2_1:"1,000 generation credits/mo",pf2_2:"4K max resolution",pf2_3:"All models",pf2_4:"120s max duration",
+  pf3_1:"Unlimited generations",pf3_2:"4K HDR + RAW export",pf3_3:"All models + priority queue",pf3_4:"120s max duration",pf3_5:"4K HDR export",pf3_6:"API access + fine-tuning",
+  btn_getstarted:"Get Started",btn_trial:"Start Free Trial",btn_sales:"Contact Sales",
+  footer_tagline:"The AI film studio for the next generation of visual storytellers. Create without limits.",
+  footer_product:"Product",footer_company:"Company",footer_legal:"Legal",
+  footer_about:"About",footer_blog:"Blog",footer_careers:"Careers",footer_press:"Press",
+  footer_privacy:"Privacy",footer_terms:"Terms",footer_cookies:"Cookies",footer_licenses:"Licenses",
+  footer_copy:"© 2025 VIDE0 — All rights reserved",
+  notif_signup:"Redirecting to signup...",notif_docs:"Opening docs...",notif_upload:"Upload feature coming soon",notif_viewer:"Opening full viewer...",notif_trial:"Starting Pro trial...",notif_sales:"Contacting sales...",notif_about:"Opening about...",notif_blog:"Opening blog...",notif_careers:"Opening careers...",notif_press:"Opening press...",notif_legal:"Opening page...",notif_generating:"Generating your film...",notif_ready:"✦ Film ready — click to view",
+  lang_changed:"Switched to English"
+},
+zh:{
+  nav_generate:"生成",nav_models:"模型",nav_gallery:"作品库",nav_pricing:"定价",nav_docs:"API 文档",nav_cta:"免费开始",
+  hero_eyebrow:"— 下一代 AI 电影制作平台 —",
+  hero_line1:"导演你的",hero_line2:"视觉世界.",
+  hero_sub:"将任何想法变成电影级视频。描述场景，选择风格，VIDE0 在几秒内生成震撼影像。",
+  hero_cta1:"生成影片",hero_cta2:"浏览作品库",
+  stat_res:"最高分辨率",stat_dur:"最长时长",stat_styles:"风格预设",stat_films:"已创建影片",
+  mq1:"文字转影片",mq2:"图片转视频",mq3:"4K 生成",mq4:"AI 摄影技术",mq5:"声音转场景",mq6:"动作控制",mq7:"风格迁移",
+  sec_generate:"生成",sec_generate_title:"创作你的\n场景",
+  tab_t2v:"文字转视频",tab_i2v:"图片转视频",tab_v2v:"视频转视频",tab_ext:"延伸视频",
+  plabel_t2v:"提示词编辑器 v2.4",plabel_i2v:"图片 → 视频",plabel_v2v:"视频 → 视频 风格迁移",plabel_ext:"视频延伸器",
+  prompt_ph:"描述你的场景……例如：'一名宇航员在暮色中独自穿越荒芜红色星球，尘埃以慢动作旋转，背对垂死的太阳——电影风格，4K'",
+  i2v_ph:"描述动态效果……例如：'镜头缓慢推进，灯光忽明忽暗'",
+  v2v_ph:"描述目标风格……例如：'韦斯·安德森电影，马卡龙色调，对称构图'",
+  ext_ph:"描述接下来发生的事……例如：'镜头拉远，整个城市映入眼帘'",
+  chip_cinematic:"电影风",chip_noir:"黑色电影",chip_scifi:"科幻",chip_horror:"恐怖",chip_doc:"纪录片",chip_anime:"动漫",chip_vintage:"复古",chip_slowmo:"慢动作",chip_drone:"航拍",chip_macro:"微距",
+  set_duration:"时长",set_res:"分辨率",set_ratio:"画面比例",set_model:"模型",set_motion:"动态强度",set_style_str:"风格强度",set_preserve:"结构保留",set_extend_by:"延伸时长",
+  opt_5s:"5 秒",opt_10s:"10 秒",opt_30s:"30 秒",opt_60s:"60 秒",opt_120s:"120 秒",
+  opt_wide:"16:9 宽屏",opt_vert:"9:16 竖屏",opt_sq:"1:1 方形",opt_ana:"2.39:1 变形宽银幕",
+  opt_fast:"VIDE0 快速",opt_pro:"VIDE0 专业",opt_ultra:"VIDE0 极致",
+  opt_p5s:"+5 秒",opt_p10s:"+10 秒",opt_p30s:"+30 秒",opt_p60s:"+60 秒",
+  btn_generate:"生成",btn_animate:"动画化",btn_transform:"风格转换",btn_extend:"延伸",
+  up_img_title:"将图片拖放至此",up_img_sub:"支持 PNG、JPG、WEBP — 最大 20MB",
+  up_vid_title:"将视频拖放至此",up_vid_sub:"支持 MP4、MOV、WEBM — 最大 200MB",
+  up_ext_title:"上传基础视频",up_ext_sub:"我们将无缝延续你的场景",
+  g1_title:"霓虹大都市",g2_title:"深海下降",g3_title:"沙漠烈火",g4_title:"北极孤寂",g5_title:"黄金时刻",g6_title:"远古森林",
+  sec_features:"为何选择 VIDE0",sec_features_title:"专为\n电影人打造",
+  f1_title:"电影级 AI",f1_desc:"我们的模型在数千部专业影片上训练，深度理解景深、构图、光影和叙事节奏。",
+  f2_title:"场景控制",f2_desc:"通过自然语言精确控制镜头运动、主体动态、节奏和氛围，实现导演级把控。",
+  f3_title:"原生 4K",f3_desc:"以原生 4K 分辨率生成，搭配 HDR 调色，每一帧都达到专业发行标准。",
+  f4_title:"风格库",f4_desc:"48 种精选电影风格——从库布里克式对称到游击手持——在整部影片中保持一致。",
+  f5_title:"时序一致性",f5_desc:"人物、环境和光影在场景间保持连贯，无闪烁、无漂移、无连续性断裂。",
+  f6_title:"API 接入",f6_desc:"通过 REST API 将 VIDE0 集成到你的制作流程，支持批量生成、Webhook 和自定义微调。",
+  sec_models:"模型",sec_models_title:"选择你的\n引擎",
+  model_badge:"新 · 最新版",
+  ultra_desc:"我们最强大的模型，在 5000 万电影帧上训练，具备高级时序一致性和照片级真实渲染。专为追求完美的制作而生。",
+  pro_desc:"专业工作的均衡之选，生成速度快且具备电影级输出质量，非常适合迭代制作流程。",
+  fast_desc:"快速原型和迭代，几秒内生成分镜质量视频，非常适合创意构思和预可视化。",
+  spec_maxdur:"最长时长",spec_res:"分辨率",spec_gentime:"生成时间",spec_fps:"帧率",
+  sec_pricing:"定价",sec_pricing_title:"透明\n定价方案",
+  plan_starter:"入门版",plan_free:"永久免费",plan_month:"每月",plan_pro_label:"专业版 — 最受欢迎",plan_studio:"工作室版",
+  pf1_1:"每月 50 次生成额度",pf1_2:"最高 720p 分辨率",pf1_3:"仅限 VIDE0 快速模型",pf1_4:"最长 10 秒",
+  pf_4k:"4K 导出",pf_commercial:"商业授权",pf_api:"API 访问",
+  pf2_1:"每月 1,000 次生成额度",pf2_2:"最高 4K 分辨率",pf2_3:"全部模型",pf2_4:"最长 120 秒",
+  pf3_1:"无限次生成",pf3_2:"4K HDR + RAW 导出",pf3_3:"全部模型 + 优先队列",pf3_4:"最长 120 秒",pf3_5:"4K HDR 导出",pf3_6:"API 访问 + 微调",
+  btn_getstarted:"立即开始",btn_trial:"开始免费试用",btn_sales:"联系销售",
+  footer_tagline:"为下一代视觉讲述者打造的 AI 电影工作室。无限创作。",
+  footer_product:"产品",footer_company:"公司",footer_legal:"法律",
+  footer_about:"关于我们",footer_blog:"博客",footer_careers:"招聘",footer_press:"新闻",
+  footer_privacy:"隐私政策",footer_terms:"服务条款",footer_cookies:"Cookie 政策",footer_licenses:"许可证",
+  footer_copy:"© 2025 VIDE0 — 保留所有权利",
+  notif_signup:"正在跳转注册...",notif_docs:"正在打开文档...",notif_upload:"上传功能即将推出",notif_viewer:"正在打开播放器...",notif_trial:"开始专业版试用...",notif_sales:"正在联系销售...",notif_about:"打开关于页面...",notif_blog:"打开博客...",notif_careers:"打开招聘页面...",notif_press:"打开新闻页面...",notif_legal:"打开页面...",notif_generating:"正在生成你的影片...",notif_ready:"✦ 影片已就绪 — 点击查看",
+  lang_changed:"已切换至中文"
+},
+ja:{
+  nav_generate:"生成",nav_models:"モデル",nav_gallery:"ギャラリー",nav_pricing:"料金",nav_docs:"API ドキュメント",nav_cta:"無料で始める",
+  hero_eyebrow:"— 次世代 AI フィルムスタジオ —",
+  hero_line1:"あなたの",hero_line2:"ビジョンを監督せよ.",
+  hero_sub:"あらゆるアイデアを映画級の映像に。シーンを言葉で描写し、スタイルを選んで、VIDE0 が数秒で圧倒的な映像を生成します。",
+  hero_cta1:"映像を生成する",hero_cta2:"ギャラリーを見る",
+  stat_res:"最大解像度",stat_dur:"最大尺",stat_styles:"スタイルプリセット",stat_films:"作成済み映像",
+  mq1:"テキストから映像",mq2:"画像から動画",mq3:"4K 生成",mq4:"AI シネマトグラフィ",mq5:"音声からシーン",mq6:"モーション制御",mq7:"スタイル転送",
+  sec_generate:"生成",sec_generate_title:"シーンを\n作り上げる",
+  tab_t2v:"テキストから動画",tab_i2v:"画像から動画",tab_v2v:"動画から動画",tab_ext:"動画を延長",
+  plabel_t2v:"プロンプトエディター v2.4",plabel_i2v:"画像 → 動画",plabel_v2v:"動画 → 動画 スタイル転送",plabel_ext:"動画延長ツール",
+  prompt_ph:"シーンを説明してください……例：「宇宙飛行士が夕暮れの荒涼とした赤い惑星を一人で歩き、砂塵がスローモーションで舞い上がる——シネマティック、4K」",
+  i2v_ph:"モーションを説明……例：「カメラがゆっくりと押し込み、光が揺らめく」",
+  v2v_ph:"目標スタイルを説明……例：「ウェス・アンダーソン作品、パステルカラー、シンメトリカルな構図」",
+  ext_ph:"続きを説明……例：「カメラが引いて街全体が映し出される」",
+  chip_cinematic:"シネマティック",chip_noir:"ノワール",chip_scifi:"SF",chip_horror:"ホラー",chip_doc:"ドキュメンタリー",chip_anime:"アニメ",chip_vintage:"ヴィンテージ",chip_slowmo:"スローモーション",chip_drone:"ドローン撮影",chip_macro:"マクロ",
+  set_duration:"尺",set_res:"解像度",set_ratio:"アスペクト比",set_model:"モデル",set_motion:"モーション強度",set_style_str:"スタイル強度",set_preserve:"構造の保持",set_extend_by:"延長時間",
+  opt_5s:"5 秒",opt_10s:"10 秒",opt_30s:"30 秒",opt_60s:"60 秒",opt_120s:"120 秒",
+  opt_wide:"16:9 ワイドスクリーン",opt_vert:"9:16 縦向き",opt_sq:"1:1 スクエア",opt_ana:"2.39:1 アナモルフィック",
+  opt_fast:"VIDE0 ファスト",opt_pro:"VIDE0 プロ",opt_ultra:"VIDE0 ウルトラ",
+  opt_p5s:"+5 秒",opt_p10s:"+10 秒",opt_p30s:"+30 秒",opt_p60s:"+60 秒",
+  btn_generate:"生成",btn_animate:"アニメート",btn_transform:"変換",btn_extend:"延長",
+  up_img_title:"画像をここにドロップ",up_img_sub:"PNG、JPG、WEBP — 最大 20MB",
+  up_vid_title:"動画をここにドロップ",up_vid_sub:"MP4、MOV、WEBM — 最大 200MB",
+  up_ext_title:"ベース動画をアップロード",up_ext_sub:"シーンをシームレスに続けます",
+  g1_title:"ネオン都市",g2_title:"深海降下",g3_title:"砂漠の業火",g4_title:"北極の孤独",g5_title:"黄金の光の中で",g6_title:"古代の森",
+  sec_features:"VIDE0 を選ぶ理由",sec_features_title:"映像作家のために\n設計された",
+  f1_title:"シネマティック AI",f1_desc:"数千本のプロ映画で訓練されたモデルが、奥行き・構図・照明・物語のリズムを理解します。",
+  f2_title:"シーンコントロール",f2_desc:"カメラ動作・被写体のモーション・テンポ・雰囲気を自然言語で精密にコントロール。",
+  f3_title:"ネイティブ 4K",f3_desc:"HDR カラーグレーディングを加えたネイティブ 4K で生成。すべてのフレームがプロ配信に対応しています。",
+  f4_title:"スタイルライブラリ",f4_desc:"キューブリック的シンメトリからゲリラハンドヘルドまで 48 種類の映画スタイルを一貫して適用。",
+  f5_title:"時間的一貫性",f5_desc:"キャラクター・環境・照明がシーンをまたいで保持されます。ちらつきやドリフトなし。",
+  f6_title:"API アクセス",f6_desc:"REST API で VIDE0 をプロダクションパイプラインに統合。バッチ生成・Webhook・ファインチューニングに対応。",
+  sec_models:"モデル",sec_models_title:"エンジンを\n選択してください",
+  model_badge:"新機能 · 最新版",
+  ultra_desc:"最も強力なモデル。5,000 万枚の映画フレームで訓練し、高度な時間的一貫性と写実的レンダリングを実現。",
+  pro_desc:"プロフェッショナルな作業のバランスの取れた選択。シネマティックな出力品質を備えた高速生成。",
+  fast_desc:"素早いプロトタイピングと反復作業。数秒でストーリーボード品質の動画を生成。",
+  spec_maxdur:"最大尺",spec_res:"解像度",spec_gentime:"生成時間",spec_fps:"フレームレート",
+  sec_pricing:"料金",sec_pricing_title:"透明な\n料金プラン",
+  plan_starter:"スターター",plan_free:"永久無料",plan_month:"月額",plan_pro_label:"プロ — 最も人気",plan_studio:"スタジオ",
+  pf1_1:"月 50 生成クレジット",pf1_2:"最大 720p 解像度",pf1_3:"VIDE0 ファストモデルのみ",pf1_4:"最大 10 秒",
+  pf_4k:"4K エクスポート",pf_commercial:"商業利用ライセンス",pf_api:"API アクセス",
+  pf2_1:"月 1,000 生成クレジット",pf2_2:"最大 4K 解像度",pf2_3:"全モデル対応",pf2_4:"最大 120 秒",
+  pf3_1:"無制限の生成",pf3_2:"4K HDR + RAW エクスポート",pf3_3:"全モデル + 優先キュー",pf3_4:"最大 120 秒",pf3_5:"4K HDR エクスポート",pf3_6:"API アクセス + ファインチューニング",
+  btn_getstarted:"始める",btn_trial:"無料トライアル開始",btn_sales:"営業に問い合わせ",
+  footer_tagline:"次世代のビジュアルストーリーテラーのための AI フィルムスタジオ。限界なく創造せよ。",
+  footer_product:"プロダクト",footer_company:"会社",footer_legal:"法的情報",
+  footer_about:"会社概要",footer_blog:"ブログ",footer_careers:"採用情報",footer_press:"プレス",
+  footer_privacy:"プライバシー",footer_terms:"利用規約",footer_cookies:"Cookie ポリシー",footer_licenses:"ライセンス",
+  footer_copy:"© 2025 VIDE0 — 全著作権所有",
+  notif_signup:"登録ページへ移動中...",notif_docs:"ドキュメントを開いています...",notif_upload:"アップロード機能は近日公開予定",notif_viewer:"ビューアーを開いています...",notif_trial:"プロトライアルを開始中...",notif_sales:"営業に連絡中...",notif_about:"会社概要を開いています...",notif_blog:"ブログを開いています...",notif_careers:"採用情報を開いています...",notif_press:"プレスページを開いています...",notif_legal:"ページを開いています...",notif_generating:"映像を生成中...",notif_ready:"✦ 映像の準備完了 — クリックして視聴",
+  lang_changed:"日本語に切り替えました"
+}};
+
+let lang = 'en';
+const t = k => (i18n[lang][k] || i18n.en[k] || k);
+
+function buildMarquee() {
+  const keys = ['mq1','mq2','mq3','mq4','mq5','mq6','mq7'];
+  let html = '';
+  for (let r=0;r<2;r++) {
+    html += `<span class="marquee-item acc">VIDE0</span>`;
+    keys.forEach((k,i) => {
+      html += `<span class="marquee-item${i%2===0?' acc':''}" data-mq="${k}">${t(k)}</span>`;
+      if (i%2!==0) html += `<span class="marquee-item acc">★</span>`;
+    });
+  }
+  document.getElementById('marqueeTrack').innerHTML = html;
+}
+
+function applyLang() {
+  document.documentElement.lang = lang==='zh'?'zh-CN':lang==='ja'?'ja':'en';
+  document.body.style.fontFamily = lang==='ja'?"'DM Sans','Noto Sans JP',sans-serif":lang==='zh'?"'DM Sans','Noto Sans SC',sans-serif":"'DM Sans',sans-serif";
+
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const k = el.getAttribute('data-i18n');
+    const v = t(k);
+    if (v.includes('\n')) { el.innerHTML = v.replace(/\n/g,'<br>'); }
+    else { el.textContent = v; }
+  });
+
+  // Hero line2 special: keep accent span
+  const hl2 = document.getElementById('heroLine2');
+  const raw = t('hero_line2');
+  const dot = raw.slice(-1);
+  hl2.innerHTML = raw.slice(0,-1) + `<span class="accent">${dot}</span>`;
+
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+    el.placeholder = t(el.getAttribute('data-i18n-ph'));
+  });
+
+  buildMarquee();
+}
+
+function setLang(l) {
+  lang = l;
+  document.querySelectorAll('.lang-btn').forEach(b => {
+    b.classList.toggle('active', (l==='en'&&b.textContent==='EN')||(l==='zh'&&b.textContent==='中文')||(l==='ja'&&b.textContent==='日本語'));
+  });
+  applyLang();
+  showNotif(t('lang_changed'));
+}
+
+function sn(key) { showNotif(t(key)); }
+
+// Cursor
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursorRing');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; cursor.style.left=mx+'px'; cursor.style.top=my+'px'; });
+(function loop(){ rx+=(mx-rx)*.12; ry+=(my-ry)*.12; ring.style.left=rx+'px'; ring.style.top=ry+'px'; requestAnimationFrame(loop); })();
+
+window.addEventListener('scroll', () => document.getElementById('navbar').classList.toggle('scrolled', window.scrollY>50));
+
+function switchTab(e,id) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  e.target.classList.add('active');
+  document.getElementById(id).classList.add('active');
+}
+function toggleChip(el) { el.classList.toggle('active'); }
+
+function triggerGenerate() {
+  const bar = document.getElementById('loadingBar');
+  bar.classList.add('active');
+  showNotif(t('notif_generating'));
+  setTimeout(()=>{ bar.classList.remove('active'); showNotif(t('notif_ready')); }, 3000);
+}
+
+let nt;
+function showNotif(msg) {
+  const el = document.getElementById('notif');
+  document.getElementById('notifText').textContent = msg;
+  el.classList.add('show');
+  clearTimeout(nt);
+  nt = setTimeout(()=>el.classList.remove('show'), 3000);
+}
+
+document.addEventListener('contextmenu', e=>e.preventDefault());
+applyLang();
+</script>
+</body>
+</html>

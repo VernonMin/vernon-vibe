@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vernon Observability</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Vernon Observability</h1>
+    <button id="seedBtn">生成演示数据</button>
+    <button id="refreshBtn">刷新</button>
+  </header>
+
+  <section class="cards" id="summaryCards"></section>
+
+  <section class="grid">
+    <article>
+      <h2>热点服务</h2>
+      <table id="serviceTable"></table>
+    </article>
+    <article>
+      <h2>Trace 概览</h2>
+      <table id="traceTable"></table>
+    </article>
+  </section>
+
+  <section>
+    <h2>RPS 趋势</h2>
+    <canvas id="metricCanvas" width="900" height="220"></canvas>
+  </section>
+
+  <section>
+    <h2>最近日志</h2>
+    <table id="logTable"></table>
+  </section>
+
+  <script src="/app.js"></script>
+</body>
+</html>

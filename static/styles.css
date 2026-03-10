@@ -1,0 +1,50 @@
+:root { color-scheme: dark; }
+body {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  background: #0b1021;
+  color: #eef2ff;
+  padding: 24px;
+}
+header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+button {
+  border: 0;
+  background: linear-gradient(90deg,#3b82f6,#06b6d4);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.cards {
+  display: grid;
+  margin-top: 16px;
+  grid-template-columns: repeat(3,minmax(120px,1fr));
+  gap: 12px;
+}
+.card {
+  background: #131a33;
+  border: 1px solid #263055;
+  border-radius: 12px;
+  padding: 16px;
+}
+.grid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+article, section {
+  margin-top: 16px;
+}
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { border-bottom: 1px solid #30395f; text-align: left; padding: 8px; }
+canvas {
+  width: 100%;
+  background: #131a33;
+  border: 1px solid #263055;
+  border-radius: 12px;
+}
